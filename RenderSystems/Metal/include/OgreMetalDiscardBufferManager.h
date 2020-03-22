@@ -30,12 +30,11 @@ Copyright (c) 2000-2016 Torus Knot Software Ltd
 #define _OgreMetalDiscardBufferManager_H_
 
 #include "OgreMetalPrerequisites.h"
-#include "Vao/OgreMetalVaoManager.h"
 
 namespace Ogre
 {
     class MetalDiscardBuffer;
-    typedef vector<MetalDiscardBuffer*>::type MetalDiscardBufferVec;
+    typedef std::vector<MetalDiscardBuffer*> MetalDiscardBufferVec;
 
     /// Metal doesn't support "DISCARD" like D3D9/D3D11 (and OpenGL but often it's broken)
     /// where we requested to map a write-only buffer and the API would discard the previous
@@ -46,26 +45,33 @@ namespace Ogre
     class _OgreMetalExport MetalDiscardBufferManager : public BufferAlloc
     {
     public:
-        struct UnsafeBlock : public MetalVaoManager::Block
+        struct Block
+        {
+            size_t offset;
+            size_t size;
+
+            Block( size_t _offset, size_t _size ) : offset( _offset ), size( _size ) {}
+        };
+
+        struct UnsafeBlock : public Block
         {
             uint32 lastFrameUsed;
 
             UnsafeBlock( size_t _offset, size_t _size, uint32 _lastFrameUsed ) :
-                MetalVaoManager::Block( _offset, _size ), lastFrameUsed( _lastFrameUsed ) {}
+                Block( _offset, _size ), lastFrameUsed( _lastFrameUsed ) {}
 
             bool operator < ( const UnsafeBlock &other ) const
             {
                 return this->lastFrameUsed < other.lastFrameUsed;
             }
         };
-        typedef vector<UnsafeBlock>::type UnsafeBlockVec;
+        typedef std::vector<UnsafeBlock> UnsafeBlockVec;
 
     private:
         id<MTLBuffer>   mBuffer;
         MetalDevice     *mDevice;
-        VaoManager      *mVaoManager;
-        MetalVaoManager::BlockVec   mFreeBlocks;
 
+        std::vector<Block> mFreeBlocks;
         UnsafeBlockVec  mUnsafeBlocks;
 
         MetalDiscardBufferVec   mDiscardBuffers;
@@ -117,7 +123,6 @@ namespace Ogre
         void destroyDiscardBuffer( MetalDiscardBuffer *discardBuffer );
 
         MetalDevice* getDevice(void) const          { return mDevice; }
-        VaoManager* getVaoManager(void) const       { return mVaoManager; }
     };
 
     class _OgreMetalExport MetalDiscardBuffer : public BufferAlloc
@@ -132,7 +137,6 @@ namespace Ogre
         uint16          mAlignment;
         uint32          mLastFrameUsed;
 
-        VaoManager                  *mVaoManager;
         MetalDiscardBufferManager   *mOwner;
 
     public:

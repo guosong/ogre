@@ -29,7 +29,7 @@ Copyright (c) 2000-2016 Torus Knot Software Ltd
 #include "OgreMetalTextureManager.h"
 #include "OgreMetalTexture.h"
 #include "OgreMetalDepthTexture.h"
-#include "OgreMetalNullTexture.h"
+#include "OgreMetalMappings.h"
 
 namespace Ogre
 {
@@ -59,13 +59,6 @@ namespace Ogre
                 return new MetalDepthTexture( shareableDepthBuffer, this, name, handle, group,
                                               isManual, loader, mDevice );
             }
-
-            NameValuePairList::const_iterator it = createParams->find( "SpecialFormat" );
-            if( it != createParams->end() && it->second == "PF_NULL" )
-            {
-                return new MetalNullTexture( this, name, handle, group,
-                                             isManual, loader, mDevice );
-            }
         }
 
         return new MetalTexture( this, name, handle, group, isManual, loader, mDevice );
@@ -78,7 +71,10 @@ namespace Ogre
         if( format == PF_B8G8R8 )
             return PF_X8B8G8R8;
 
-        return format;
+        if(MetalMappings::getPixelFormat( format, false ) != MTLPixelFormatInvalid)
+            return format;
+
+        return PF_BYTE_RGBA;
     }
 
     bool MetalTextureManager::isHardwareFilteringSupported( TextureType ttype, PixelFormat format,
